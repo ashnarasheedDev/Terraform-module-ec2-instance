@@ -117,6 +117,7 @@ module "ec2_instance" {
   source       = "./ec2-instance"  # Path to your module directory
   project_name = var.my_project
   project_env = var.my_env
+  ami_id = var.ami_id
   instance_type = var.instance_type
 
 }
