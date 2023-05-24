@@ -51,7 +51,7 @@ output "instance_public_ip" {
 ```
 
 
-> <b>Create main.tf<?b>
+> <b>Create main.tf</b>
 
  
 In the main.tf file, define the EC2 instance resource block using the input variables defined in variables.tf.
@@ -108,20 +108,20 @@ default = "t2.micro"
 }
 ```
 
+
 > <b>Create a file named main.tf to use your EC2 instance module.</b>
 
 
+```
 module "ec2_instance" {
   source       = "./ec2-instance"  # Path to your module directory
   project_name = var.my_project
   project_env = var.my_env
   instance_type = var.instance_type
 
-  # Pass additional input variables if needed
 }
 
-# Additional resources and configurations
-
+```
 
 You can now use the module by running **terraform init** and then **terraform apply** in the root directory of your main project.
 
