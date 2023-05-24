@@ -15,22 +15,33 @@ Creating a Terraform module for resources allows you to encapsulate the configur
 > <b>Create variables.tf</b>
 
 ```
-variable "project_name" {
-  type        = string
+variable "frontend_ports" {
+    
+  type    = list
+  default = ["22","80","21","443"]
+    
 }
 
-variable "project_env" {
-  type        = string
+variable "my_project"{
+default = "zomato"
+}
+
+variable "my_env"{
+default = "test"
+}
+
+variable "region" {
+default = "ap-south-1"
 }
 
 variable "instance_type" {
-  type        = string
+default = "t2.micro"
 }
 
 variable "ami_id" {
-  type        = string
-  
+default = "ami-0c768662cc797cd75"
 }
+
 ```
 
 > <b>Create outputs.tf</b> 
@@ -54,19 +65,77 @@ output "instance_public_ip" {
 > <b>Create main.tf</b>
 
  
-In the main.tf file, define the EC2 instance resource block using the input variables defined in variables.tf.
+In the main.tf file, define resource block for EC2 instance, Key_pair,SG, EIP using the input variables defined in variables.tf. 
 
 ```
-resource "aws_instance" "webserver" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
-  tags = {
-    Name = var.project_name
-    Env = var.project_env
-  }
+## creating keypair and downloading to local end
 
-  # Add other instance configurations
+resource "tls_private_key" "mykey" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
+
+resource "aws_key_pair" "mykey" {
+  key_name   = "${var.my_project}-${var.my_env}" # Create "myKey" to AWS
+  public_key = tls_private_key.mykey.public_key_openssh
+}
+resource "local_file" "mykey" {
+  filename        = "${var.my_project}-${var.my_env}.pem"
+  content         = tls_private_key.mykey.private_key_pem
+  file_permission = "400"
+}
+
+
+## creating sg for instance
+
+resource "aws_security_group" "webserver" {
+        
+  name_prefix        = "${var.my_project}-${var.my_env}"
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+resource "aws_security_group_rule" "webserver-rules" {
+    
+  for_each          = toset(var.frontend_ports)
+        
+  type              = "ingress"
+  from_port         = each.key
+  to_port           = each.key
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  ipv6_cidr_blocks  = ["::/0"]
+  security_group_id = aws_security_group.webserver.id
+}
+
+## creating ec2 instance
+
+resource "aws_instance" "webserver" {
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  key_name               = aws_key_pair.mykey.key_name
+  vpc_security_group_ids = [aws_security_group.webserver.id]
+
+  tags = {
+    Name    = "${var.my_project}-${var.my_env}"
+    Project = "${var.my_project}"
+    Env     = "${var.my_env}"
+  }
+}
+
+## eip for instance
+
+resource "aws_eip" "eip" {
+  instance = aws_instance.webserver.id
+  vpc      = true
+}
+
 ```
 
 Add any additional configurations required for the EC2 instance, such as security groups, key pairs, or networking settings.
@@ -91,21 +160,18 @@ region = "ap-south-1"
 
 
 ```
-variable "my_project" {
-default = "<project-name>"
+variable "region" {
+default = "ap-south-1"
 }
 
-variable "my_env" {
+variable "project_name" {
+default = "swiggy"
+}
+
+variable "project_env" {
 default = "dev"
 }
 
-variable "ami_id" {
-default = "<your-ami-id>"
-}
-
-variable "instance_type" {
-default = "t2.micro"
-}
 ```
 
 
@@ -113,14 +179,16 @@ default = "t2.micro"
 
 
 ```
-module "ec2_instance" {
-  source       = "./ec2-instance"  # Path to your module directory
-  project_name = var.my_project
-  project_env = var.my_env
-  ami_id = var.ami_id
-  instance_type = var.instance_type
+
+module "ec2-instance" {
+
+source = "/home/ec2-user/ec2-module"
+
+my_project = var.project_name
+my_env  = var.project_env
 
 }
+
 
 ```
 
