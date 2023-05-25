@@ -2,6 +2,16 @@
 
 Creating a Terraform module for resources allows you to encapsulate the configuration and reuse it across different projects or environments. Here's an example of how you can create a Terraform module for an EC2 instance
 
+
+
+### Pre-requisites:
+
+1. IAM Role (Role needs to be attached on terraform running server)
+2. knowledge about AWS services especially VPC, EC2 and IP Subnetting.
+3. Terraform and its installation.
+
+
+
 > <b><i>Step by step method</i></b>
 
 
